@@ -32,8 +32,3 @@ A simple, client-side HTML page that allows you to decrypt AES-encrypted data us
 
 - The decryption key is stored in session storage and will be cleared when the browser tab is closed.
 - Supports both JSON-wrapped encrypted data (with an `r` field) and raw encrypted strings.
-
-## License
-
-This project is open source and available under the MIT License.
-# knky_decrypt_key
