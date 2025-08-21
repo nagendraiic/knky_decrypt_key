@@ -1,19 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel="icon" type="image" href="favicon.ico">
+  <link rel="icon" type="image" href="favicon.ico">
   <title>Decrypt Data</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src=https://cdn.jsdelivr.net/npm/pretty-print-json@3.0/dist/pretty-print-json.min.js></script>
   <style>
-    body { 
-        font-family: Arial, sans-serif; margin: 20px;
-     }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
 
-    .container { 
-        max-width: 1200px; margin: 0 auto;
-     }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
     .main-layout {
       display: flex;
@@ -28,7 +32,7 @@
       max-width: 300px;
     }
 
-    .output-section{
+    .output-section {
       flex: 1;
       max-width: 1600px;
       min-width: 300px;
@@ -36,16 +40,16 @@
       margin-top: 40px;
     }
 
- .center-section {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: flex-start;
-  min-width: 250px;
-  position: absolute;
-  top: 290px;
- 
-}
+    .center-section {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: flex-start;
+      min-width: 250px;
+      position: absolute;
+      top: 290px;
+
+    }
 
     .decrypt-key-section {
       margin-bottom: 20px;
@@ -104,37 +108,37 @@
       border: 1px solid #f5c6cb;
     }
 
-    textarea { 
-        width: 100%;
-        height: 225px;
-        margin-bottom: 10px;
-        resize: vertical;
-     }
-
-    button { 
-        padding: 10px 20px;
-        cursor: pointer;
-        background-color: #91087f;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        font-size: 16px;
-     }
-
-    button:hover {
-        background-color: #bb2ca8;
+    textarea {
+      width: 100%;
+      height: 225px;
+      margin-bottom: 10px;
+      resize: vertical;
     }
 
-    pre { 
-        background: #f4f4f4;
-        padding: 10px;
-        overflow-x: auto;
-        border-radius: 5px;
-        border: 1px solid #ddd;
-     }
+    button {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #91087f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+    }
 
-    .output { 
-      border: 1px solid #ddd; 
+    button:hover {
+      background-color: #bb2ca8;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      overflow-x: auto;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    .output {
+      border: 1px solid #ddd;
       padding: 15px;
       border-radius: 5px;
       background-color: #fafafa;
@@ -152,7 +156,7 @@
       padding: 5px 10px;
       font-size: 12px;
       background-color: #91087f;
-   
+
     }
 
     .copy-btn:hover {
@@ -178,6 +182,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <h1 style="text-align: center;">Decrypt Data</h1>
@@ -185,23 +190,23 @@
     <div class="decrypt-key-section">
       <h3>Enter Decrypt Key:</h3>
       <div class="key-input-group">
-        <input type="password" id="decryptKey" placeholder="Enter your decrypt key..." >
+        <input type="password" id="decryptKey" placeholder="Enter your decrypt key...">
         <button class="submit-key-btn" onclick="submitDecryptKey()">Submit</button>
       </div>
       <div id="keyStatus" class="key-status"></div>
     </div>
-    
+
     <div class="main-layout">
       <div class="input-section">
         <h3>Enter encrypted data:</h3>
         <textarea id="encryptedInput" placeholder="Paste your encrypted text here..."></textarea>
       </div>
-      
+
       <div class="center-section">
         <button onclick="decryptData()">Get api response</button>
         <div id="arrow" class="arrow">→</div>
       </div>
-      
+
       <div class="output-section">
         <div class="output">
           <div class="output-header">
@@ -214,64 +219,92 @@
     </div>
   </div>
 
-  <script>
-    
-    // Load decrypt key from session storage on page load
-    window.onload = function() {
-      const storedKey = sessionStorage.getItem('decrypt_key');
-      if (storedKey) {
-        document.getElementById('decryptKey').value = storedKey;
+  <script type="module">
+    import loader from "https://cdn.jsdelivr.net/npm/@monaco-editor/loader/+esm";
+    loader.config({
+      paths: {
+        vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs",
+      },
+    });
+
+    let monacoApi, monacoEditor;
+
+    async function renderWithMonaco(content, lang = "json") {
+      const el = document.getElementById("decryptedOutput");
+      if (!monacoApi) monacoApi = await loader.init();
+
+      const value =
+        typeof content === "string"
+          ? content
+          : JSON.stringify(content, null, 2);
+
+      if (!monacoEditor) {
+        monacoEditor = monacoApi.editor.create(el, {
+          value,
+          language: lang,
+          theme: "vs-dark",
+          readOnly: true,
+          automaticLayout: true,
+          folding: true,
+          minimap: { enabled: false },
+          wordWrap: "on",
+        });
+      } else {
+        const model = monacoEditor.getModel();
+        monacoApi.editor.setModelLanguage(model, lang);
+        monacoEditor.setValue(value);
       }
     }
 
-    // Function to submit and store decrypt key
+    window.onload = function () {
+      const storedKey = sessionStorage.getItem("decrypt_key");
+      if (storedKey) {
+        document.getElementById("decryptKey").value = storedKey;
+      }
+    };
+
     function submitDecryptKey() {
-      const keyInput = document.getElementById('decryptKey');
+      const keyInput = document.getElementById("decryptKey");
       const keyValue = keyInput.value.trim();
-      
       if (!keyValue) {
-        showKeyStatus('Please enter a decrypt key', 'error');
+        showKeyStatus("Please enter a decrypt key", "error");
         return;
       }
-      
-      sessionStorage.setItem('decrypt_key', keyValue);
-      showKeyStatus('Decrypt key saved successfully!', 'success');
-     
+      sessionStorage.setItem("decrypt_key", keyValue);
+      showKeyStatus("Decrypt key saved successfully!", "success");
     }
 
-    // Function to show key status message
     function showKeyStatus(message, type) {
-      const statusElement = document.getElementById('keyStatus');
+      const statusElement = document.getElementById("keyStatus");
       statusElement.textContent = message;
       statusElement.className = `key-status ${type}`;
-      statusElement.style.display = 'block';
-      
+      statusElement.style.display = "block";
       setTimeout(() => {
-        statusElement.style.display = 'none';
+        statusElement.style.display = "none";
       }, 3000);
     }
 
-    // Function to copy the decrypted output to clipboard
     function ResponseCopy() {
-      const outputElement = document.getElementById('decryptedOutput');
-      const copyButton = document.querySelector('.copy-btn');
-      const textToCopy = outputElement.textContent || outputElement.innerText;
-      
-      navigator.clipboard.writeText(textToCopy)
+      const outputElement = document.getElementById("decryptedOutput");
+      const copyButton = document.querySelector(".copy-btn");
+      const textToCopy = monacoEditor
+        ? monacoEditor.getValue()
+        : outputElement.textContent || outputElement.innerText;
+
+      navigator.clipboard
+        .writeText(textToCopy)
         .then(() => {
           copyButton.textContent = "Copied";
           copyButton.style.backgroundColor = "#155724";
-          
           setTimeout(() => {
             copyButton.textContent = "Copy";
             copyButton.style.backgroundColor = "#28a745";
           }, 2000);
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Failed to copy: ", err);
           copyButton.textContent = "Error";
           copyButton.style.backgroundColor = "#dc3545";
-          
           setTimeout(() => {
             copyButton.textContent = "Copy";
             copyButton.style.backgroundColor = "#28a745";
@@ -279,147 +312,152 @@
         });
     }
 
-    // Function to decrypt the data
-    function decryptData() {
-      const encryptedText = document.getElementById('encryptedInput').value.trim();
-     
-      const password = sessionStorage.getItem('decrypt_key');
-      
-      const arrow = document.getElementById('arrow');
-      arrow.classList.add('show');
-      
-      setTimeout(() => {
-        arrow.classList.remove('show');
-      }, 3000);
-      
+    async function decryptData() {
+      const encryptedText = document
+        .getElementById("encryptedInput")
+        .value.trim();
+      const password = sessionStorage.getItem("decrypt_key");
+
+      const arrow = document.getElementById("arrow");
+      arrow.classList.add("show");
+      setTimeout(() => arrow.classList.remove("show"), 3000);
+
       if (!encryptedText) {
-        document.getElementById('decryptedOutput').innerHTML = 
-          "Please enter the encrypted text";
+        await renderWithMonaco(
+          "Please enter the encrypted text",
+          "plaintext"
+        );
         return;
       }
-      
+
       if (!password) {
-        document.getElementById('decryptedOutput').innerHTML = 
-          "Please enter and submit a decrypt key first by clicking the Submit button";
+        await renderWithMonaco(
+          "Please enter and submit a decrypt key first by clicking the Submit button",
+          "plaintext"
+        );
         return;
       }
-      
+
       try {
         let textToDecrypt = encryptedText;
-        
-        
-        if ((encryptedText.startsWith('"') && encryptedText.endsWith('"')) || 
-            (encryptedText.startsWith("'") && encryptedText.endsWith("'"))) {
 
-              textToDecrypt = encryptedText.slice(1, -1);
-          
-          const decrypted = CryptoJS.AES.decrypt(textToDecrypt, password).toString(CryptoJS.enc.Utf8);
-          
+        if (
+          (encryptedText.startsWith('"') && encryptedText.endsWith('"')) ||
+          (encryptedText.startsWith("'") && encryptedText.endsWith("'"))
+        ) {
+          textToDecrypt = encryptedText.slice(1, -1);
+
+          const decrypted = CryptoJS.AES.decrypt(
+            textToDecrypt,
+            password
+          ).toString(CryptoJS.enc.Utf8);
           if (!decrypted) {
-            document.getElementById('decryptedOutput').innerHTML = 
-              "Error: Incorrect password or invalid encrypted data";
+            await renderWithMonaco(
+              "Error: Incorrect password or invalid encrypted data",
+              "plaintext"
+            );
             return;
           }
-          
-          // Check if the decrypted content is JSON
+
           try {
             const jsonData = JSON.parse(decrypted);
             if (jsonData.r) {
-
-              const nestedDecrypted = CryptoJS.AES.decrypt(jsonData.r, password).toString(CryptoJS.enc.Utf8);
+              const nestedDecrypted = CryptoJS.AES.decrypt(
+                jsonData.r,
+                password
+              ).toString(CryptoJS.enc.Utf8);
               if (nestedDecrypted) {
                 try {
                   const nestedJsonData = JSON.parse(nestedDecrypted);
-                  document.getElementById('decryptedOutput').innerHTML = 
-                    `<pre>${JSON.stringify(nestedJsonData, null, 2)}</pre>`;
-                } catch (e) {
-                  document.getElementById('decryptedOutput').innerHTML = 
-                    `<pre>${nestedDecrypted}</pre>`;
+                  await renderWithMonaco(nestedJsonData, "json");
+                } catch {
+                  await renderWithMonaco(nestedDecrypted, "plaintext");
                 }
                 return;
               }
             }
-
-            document.getElementById('decryptedOutput').innerHTML = 
-              `<pre>${JSON.stringify(jsonData, null, 2)}</pre>`;
+            await renderWithMonaco(jsonData, "json");
             return;
-          } catch (jsonError) {
-            document.getElementById('decryptedOutput').innerHTML = 
-              `<pre>${decrypted}</pre>`;
+          } catch {
+            await renderWithMonaco(decrypted, "plaintext");
             return;
           }
         }
-        
-        // Original logic for non-quoted strings
+
         try {
           const inputJson = JSON.parse(encryptedText);
           if (inputJson.r) {
-            const decrypted = CryptoJS.AES.decrypt(inputJson.r, password).toString(CryptoJS.enc.Utf8);
+            const decrypted = CryptoJS.AES.decrypt(
+              inputJson.r,
+              password
+            ).toString(CryptoJS.enc.Utf8);
             if (decrypted) {
               try {
                 const jsonData = JSON.parse(decrypted);
-                document.getElementById('decryptedOutput').innerHTML = 
-                  `<pre>${JSON.stringify(jsonData, null, 2)}</pre>`;
-              } catch (e) {
-                document.getElementById('decryptedOutput').innerHTML = 
-                  `<pre>${decrypted}</pre>`;
+                await renderWithMonaco(jsonData, "json");
+              } catch {
+                await renderWithMonaco(decrypted, "plaintext");
               }
               return;
             } else {
-              document.getElementById('decryptedOutput').innerHTML = 
-                "Error: Could not decrypt the 'r' field data";
+              await renderWithMonaco(
+                "Error: Could not decrypt the 'r' field data",
+                "plaintext"
+              );
               return;
             }
           }
+          await renderWithMonaco(inputJson, "json");
+          return;
+        } catch { }
 
-          document.getElementById('decryptedOutput').innerHTML = 
-            `<pre>${JSON.stringify(inputJson, null, 2)}</pre>`;
-          return;
-        } catch (jsonError) {
-        }
-        
-        const decrypted = CryptoJS.AES.decrypt(encryptedText, password).toString(CryptoJS.enc.Utf8);
-        
+        const decrypted = CryptoJS.AES.decrypt(
+          encryptedText,
+          password
+        ).toString(CryptoJS.enc.Utf8);
         if (!decrypted) {
-          document.getElementById('decryptedOutput').innerHTML = 
-            "Error: Incorrect password or invalid encrypted data";
+          await renderWithMonaco(
+            "Error: Incorrect password or invalid encrypted data",
+            "plaintext"
+          );
           return;
         }
-        
-        // Check if the decrypted content is JSON with an "r" field
+
         try {
           const jsonData = JSON.parse(decrypted);
           if (jsonData.r) {
-            const nestedDecrypted = CryptoJS.AES.decrypt(jsonData.r, password).toString(CryptoJS.enc.Utf8);
+            const nestedDecrypted = CryptoJS.AES.decrypt(
+              jsonData.r,
+              password
+            ).toString(CryptoJS.enc.Utf8);
             if (nestedDecrypted) {
               try {
                 const nestedJsonData = JSON.parse(nestedDecrypted);
-                document.getElementById('decryptedOutput').innerHTML = 
-                  `<pre>${JSON.stringify(nestedJsonData, null, 2)}</pre>`;
-              } catch (e) {
-                document.getElementById('decryptedOutput').innerHTML = 
-                  `<pre>${nestedDecrypted}</pre>`;
+                await renderWithMonaco(nestedJsonData, "json");
+              } catch {
+                await renderWithMonaco(nestedDecrypted, "plaintext");
               }
               return;
             }
           }
-          
-          // If it's valid JSON but no "r" field, display normally
-          document.getElementById('decryptedOutput').innerHTML = 
-            `<pre>${JSON.stringify(jsonData, null, 2)}</pre>`;
+          await renderWithMonaco(jsonData, "json");
           return;
-        } catch (jsonError) {
-          document.getElementById('decryptedOutput').innerHTML = 
-            `<pre>${decrypted}</pre>`;
+        } catch {
+          await renderWithMonaco(decrypted, "plaintext");
           return;
         }
-        
       } catch (error) {
-        document.getElementById('decryptedOutput').innerHTML = 
-          `Decryption error: ${error.message}`;
+        await renderWithMonaco(
+          `Decryption error: ${error.message}`,
+          "plaintext"
+        );
       }
     }
 
+    window.submitDecryptKey = submitDecryptKey;
+    window.ResponseCopy = ResponseCopy;
+    window.decryptData = decryptData;
   </script>
 </body>
+
 </html>
